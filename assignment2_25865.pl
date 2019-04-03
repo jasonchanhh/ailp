@@ -3,7 +3,7 @@ candidate_number(25865).
 solve_task(Task,Cost):-
   my_agent(Agent),
   query_world( agent_current_position, [Agent,P] ),
-  solve_task_bt(Task,[[c(0,P),P]],0,R,Cost,_NewPos),!,  % prune choice point for efficiency
+  solve_task_bt(Task,[c(0,P),P],0,R,Cost,_NewPos),!,  % prune choice point for efficiency
   reverse(R,[_Init|Path]),
   query_world( agent_do_moves, [Agent,Path] ).
 
@@ -11,13 +11,25 @@ solve_task(Task,Cost):-
 %% backtracking depth-first search, needs to be changed to agenda-based A*
 solve_task_bt(Task,Current,Depth,RPath,[cost(Cost),depth(Depth)],NewPos) :-
   achieved(Task,Current,RPath,Cost,NewPos).
-solve_task_bt(Task,[Current|Rest],D,RR,Cost,NewPos) :-
+solve_task_bt(Task,Current,D,RR,Cost,NewPos) :-
   Current = [c(F,P)|RPath],
   search(P,P1,R,C),
   \+ memberchk(R,RPath),  % check we have not been here already
   D1 is D+1,
   F1 is F+C,
   solve_task_bt(Task,[c(F1,P1),R|RPath],D1,RR,Cost,NewPos).  % backtrack search
+
+%% agenda-based A* search
+solve_task_agenda(Task,[Current|...],Depth,RPath,[cost(Cost),depth(Depth)],NewPos) :-
+  achieved(Task,Current,RPath,Cost,NewPos).
+solve_task_agenda(Task,[Current|Agenda],D,RR,Cost,NewPos) :-
+  Current = [c(F,G,P)|RPath],
+  search(P,P1,R,C),
+  \+ memberchk(R,RPath),  % check we have not been here already
+  D1 is D+1,
+  F1 is F+C,
+  solve_task_agenda(Task,[c(F1,P1),R|RPath],D1,RR,Cost,NewPos).  % backtrack search
+
 
 achieved(go(Exit),Current,RPath,Cost,NewPos) :-
   Current = [c(Cost,NewPos)|RPath],
@@ -31,4 +43,4 @@ achieved(find(O),Current,RPath,Cost,NewPos) :-
   ).
 
 search(F,N,N,1) :-
-  setof(N,map_adjacent(F,N,empty),Children).
+  map_adjacent(F,N,empty).
